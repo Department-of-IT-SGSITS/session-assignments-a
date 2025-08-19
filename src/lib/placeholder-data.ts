@@ -1,6 +1,6 @@
 import type { WeatherData, AlertSettings } from '@/types';
 
-export const currentLocation = "San Francisco, CA";
+export const currentLocation = "Bhopal";
 
 export const currentWeather = {
   temperature: 18,
