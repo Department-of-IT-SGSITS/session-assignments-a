@@ -1,11 +1,12 @@
 'use client';
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from "@/components/ui/chart";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
-import { historicalData } from "@/lib/placeholder-data";
-
-const chartData = historicalData.map(d => ({...d, date: new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})).reverse();
+import { collection, onSnapshot, query, orderBy, limit } from "firebase/firestore";
+import { db } from "@/lib/firebase-client";
+import type { WeatherData } from "@/types";
 
 const chartConfig = {
   temp: {
@@ -15,6 +16,21 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 export function HistoricalData() {
+  const [data, setData] = useState<WeatherData[]>([]);
+
+  useEffect(() => {
+    const q = query(collection(db, "weather"), orderBy("date", "desc"), limit(7));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const weatherData = snapshot.docs.map(doc => doc.data() as WeatherData);
+      setData(weatherData);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const chartData = data.map(d => ({...d, date: new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})).reverse();
+
+
   return (
     <Card className="col-span-1 lg:col-span-2">
       <CardHeader>
@@ -74,13 +90,13 @@ export function HistoricalData() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {historicalData.map((data, index) => (
+                {data.map((data, index) => (
                   <TableRow key={index}>
                     <TableCell className="font-medium">{new Date(data.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</TableCell>
-                    <TableCell className="text-right">{data.temp}</TableCell>
+                    <TableCell className="text-right">{data.temp.toFixed(1)}</TableCell>
                     <TableCell className="text-right">{data.humidity}</TableCell>
                     <TableCell className="text-right">{data.rain}</TableCell>
-                    <TableCell className="text-right">{data.wind}</TableCell>
+                    <TableCell className="text-right">{data.wind.toFixed(1)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

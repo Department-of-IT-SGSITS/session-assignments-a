@@ -12,3 +12,7 @@ export type AlertSettings = {
   email: string;
   alertsEnabled: boolean;
 };
+
+export type LocationSettings = {
+  city: string;
+};

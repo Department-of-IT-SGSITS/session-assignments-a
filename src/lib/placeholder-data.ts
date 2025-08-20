@@ -1,4 +1,4 @@
-import type { WeatherData, AlertSettings } from '@/types';
+import type { WeatherData, AlertSettings, LocationSettings } from '@/types';
 
 export const currentLocation = "Bhopal";
 
@@ -26,4 +26,8 @@ export const alertSettings: AlertSettings = {
   maxRain: 10,
   email: "user@example.com",
   alertsEnabled: true
+};
+
+export const locationSettings: LocationSettings = {
+  city: "Bhopal",
 };

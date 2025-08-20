@@ -1,9 +1,5 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
-import admin from 'firebase-admin';
-
-// This file is being deprecated and will be removed.
-// Please use firebase-client.ts for client-side firebase, and firebase-admin.ts for server-side.
 
 const firebaseConfig = {
   projectId: "studio-2177517838-2b6e7",
@@ -18,14 +14,4 @@ const firebaseConfig = {
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const db = getFirestore(app);
 
-// Initialize Firebase Admin for server-side
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.applicationDefault(),
-    databaseURL: `https://${firebaseConfig.projectId}.firebaseio.com`
-  });
-}
-
-const adminDb = admin.firestore();
-
-export { app, db, adminDb };
+export { app, db };

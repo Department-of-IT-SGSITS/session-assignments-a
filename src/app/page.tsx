@@ -1,6 +1,7 @@
 import { CurrentWeather } from "@/components/current-weather";
 import { HistoricalData } from "@/components/historical-data";
 import { AlertSettings } from "@/components/alert-settings";
+import { LocationSettings } from "@/components/location-settings";
 
 export default function Home() {
   return (
@@ -12,8 +13,9 @@ export default function Home() {
             <CurrentWeather />
             <HistoricalData />
           </div>
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 space-y-6">
             <AlertSettings />
+            <LocationSettings />
           </div>
         </div>
       </div>

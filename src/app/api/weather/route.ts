@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase';
+import { adminDb } from '@/lib/firebase-admin';
 import type { WeatherData } from '@/types';
 
-async function fetchWeather() {
-  const city = 'Bhopal';
+async function fetchWeather(city: string) {
   const apiKey = process.env.OPENWEATHER_API_KEY;
   if (!apiKey) {
     throw new Error('OPENWEATHER_API_KEY is not set in .env.local');
@@ -12,7 +11,7 @@ async function fetchWeather() {
 
   const response = await fetch(url);
   if (!response.ok) {
-    throw new Error(`Failed to fetch weather data: ${response.statusText}`);
+    throw new Error(`Failed to fetch weather data for ${city}: ${response.statusText}`);
   }
   const data = await response.json();
   
@@ -34,7 +33,11 @@ async function sendEmail(weather: WeatherData) {
 
 export async function GET() {
   try {
-    const weatherData = await fetchWeather();
+    const locationRef = adminDb.collection('settings').doc('location');
+    const locationDoc = await locationRef.get();
+    const city = locationDoc.exists ? locationDoc.data()?.city || 'Bhopal' : 'Bhopal';
+
+    const weatherData = await fetchWeather(city);
 
     // Save to Firestore
     const weatherRef = adminDb.collection('weather').doc(new Date().toISOString());
