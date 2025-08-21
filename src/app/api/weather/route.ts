@@ -1,17 +1,26 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
-import type { WeatherData } from '@/types';
+import type { WeatherData, LocationSettings } from '@/types';
 
-async function fetchWeather(city: string) {
+async function fetchWeather(location: LocationSettings) {
   const apiKey = process.env.OPENWEATHER_API_KEY;
   if (!apiKey) {
     throw new Error('OPENWEATHER_API_KEY is not set in .env.local');
   }
-  const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`;
+
+  let url = `https://api.openweathermap.org/data/2.5/weather?appid=${apiKey}&units=metric`;
+
+  if (location.lat && location.lon) {
+    url += `&lat=${location.lat}&lon=${location.lon}`;
+  } else if (location.city) {
+    url += `&q=${location.city}`;
+  } else {
+    throw new Error('No location provided. Please set a city or coordinates.');
+  }
 
   const response = await fetch(url);
   if (!response.ok) {
-    throw new Error(`Failed to fetch weather data for ${city}: ${response.statusText}`);
+    throw new Error(`Failed to fetch weather data for ${location.city || `${location.lat},${location.lon}`}: ${response.statusText}`);
   }
   const data = await response.json();
   
@@ -35,9 +44,16 @@ export async function GET() {
   try {
     const locationRef = adminDb.collection('settings').doc('location');
     const locationDoc = await locationRef.get();
-    const city = locationDoc.exists ? locationDoc.data()?.city || 'Bhopal' : 'Bhopal';
+    
+    const location: LocationSettings = locationDoc.exists 
+      ? (locationDoc.data() as LocationSettings)
+      : { city: 'Bhopal' };
 
-    const weatherData = await fetchWeather(city);
+    if (!location.city && (!location.lat || !location.lon)) {
+        location.city = 'Bhopal'; // Default fallback
+    }
+
+    const weatherData = await fetchWeather(location);
 
     // Save to Firestore
     const weatherRef = adminDb.collection('weather').doc(new Date().toISOString());

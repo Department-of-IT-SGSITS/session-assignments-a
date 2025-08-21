@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { LocationSettings as LocationSettingsType } from "@/types";
 
 export function LocationSettings() {
-  const [location, setLocation] = useState<LocationSettingsType>({ city: "Bhopal" });
+  const [location, setLocation] = useState<LocationSettingsType>({ city: "Bhopal", lat: undefined, lon: undefined });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -26,7 +26,12 @@ export function LocationSettings() {
 
   const handleSave = async () => {
     try {
-      await setDoc(doc(db, "settings", "location"), location);
+      // Create a clean object to save, removing empty fields
+      const dataToSave: Partial<LocationSettingsType> = { city: location.city };
+      if (location.lat) dataToSave.lat = Number(location.lat);
+      if (location.lon) dataToSave.lon = Number(location.lon);
+
+      await setDoc(doc(db, "settings", "location"), dataToSave, { merge: true });
       toast({
         title: "Success",
         description: "Location saved successfully.",
@@ -38,6 +43,10 @@ export function LocationSettings() {
         description: "Failed to save location.",
       });
     }
+  };
+  
+  const handleChange = (field: keyof LocationSettingsType, value: string) => {
+    setLocation(prev => ({ ...prev, [field]: value }));
   };
 
   return (
@@ -53,8 +62,30 @@ export function LocationSettings() {
             id="city" 
             placeholder="Enter a city name" 
             value={location.city}
-            onChange={(e) => setLocation({ city: e.target.value })}
+            onChange={(e) => handleChange("city", e.target.value)}
           />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="lat">Latitude</Label>
+            <Input 
+              id="lat" 
+              type="number"
+              placeholder="e.g. 23.2599" 
+              value={location.lat || ""}
+              onChange={(e) => handleChange("lat", e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="lon">Longitude</Label>
+            <Input 
+              id="lon" 
+              type="number"
+              placeholder="e.g. 77.4126" 
+              value={location.lon || ""}
+              onChange={(e) => handleChange("lon", e.target.value)}
+            />
+          </div>
         </div>
         <Button onClick={handleSave} className="w-full bg-accent text-accent-foreground hover:bg-accent/90">Save Location</Button>
       </CardContent>

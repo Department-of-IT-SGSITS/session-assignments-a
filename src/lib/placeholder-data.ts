@@ -30,4 +30,6 @@ export const alertSettings: AlertSettings = {
 
 export const locationSettings: LocationSettings = {
   city: "Bhopal",
+  lat: 23.2599,
+  lon: 77.4126
 };
