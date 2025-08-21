@@ -14,7 +14,7 @@ export type AlertSettings = {
 };
 
 export type LocationSettings = {
-  city: string;
+  city?: string;
   lat?: number;
   lon?: number;
 };
