@@ -7,6 +7,8 @@ import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { collection, onSnapshot, query, orderBy, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase-client";
 import type { WeatherData } from "@/types";
+import { historicalData as placeholderHistory } from "@/lib/placeholder-data";
+
 
 const chartConfig = {
   temp: {
@@ -16,13 +18,15 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 export function HistoricalData() {
-  const [data, setData] = useState<WeatherData[]>([]);
+  const [data, setData] = useState<WeatherData[]>(placeholderHistory);
 
   useEffect(() => {
     const q = query(collection(db, "weather"), orderBy("date", "desc"), limit(7));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const weatherData = snapshot.docs.map(doc => doc.data() as WeatherData);
-      setData(weatherData);
+      if (!snapshot.empty) {
+        const weatherData = snapshot.docs.map(doc => doc.data() as WeatherData);
+        setData(weatherData);
+      }
     });
 
     return () => unsubscribe();

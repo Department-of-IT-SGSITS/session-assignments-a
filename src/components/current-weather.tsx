@@ -3,25 +3,38 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { WeatherIcon } from "@/components/weather-icon";
 import { db } from "@/lib/firebase-client";
-import { collection, onSnapshot, query, orderBy, limit, getDoc, doc } from "firebase/firestore";
+import { collection, onSnapshot, query, orderBy, limit, doc } from "firebase/firestore";
 import type { WeatherData } from "@/types";
+import { currentWeather as placeholderWeather, currentLocation } from "@/lib/placeholder-data";
 
 export function CurrentWeather() {
   const [weather, setWeather] = useState<WeatherData | null>(null);
-  const [location, setLocation] = useState("Bhopal");
+  const [location, setLocation] = useState(currentLocation);
 
   useEffect(() => {
     const weatherQuery = query(collection(db, "weather"), orderBy("date", "desc"), limit(1));
     const unsubscribeWeather = onSnapshot(weatherQuery, (snapshot) => {
       if (!snapshot.empty) {
         setWeather(snapshot.docs[0].data() as WeatherData);
+      } else {
+        // Use placeholder data if Firestore is empty
+        const now = new Date().toISOString();
+        setWeather({
+            date: now,
+            temp: placeholderWeather.temperature,
+            humidity: placeholderWeather.humidity,
+            rain: placeholderWeather.precipitation,
+            wind: placeholderWeather.wind
+        });
       }
     });
 
     const locationRef = doc(db, "settings", "location");
     const unsubscribeLocation = onSnapshot(locationRef, (docSnap) => {
-      if (docSnap.exists()) {
-        setLocation(docSnap.data().city || "Bhopal");
+      if (docSnap.exists() && docSnap.data().city) {
+        setLocation(docSnap.data().city);
+      } else {
+        setLocation(currentLocation);
       }
     });
 
@@ -47,7 +60,7 @@ export function CurrentWeather() {
           <p>Please wait.</p>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   return (
