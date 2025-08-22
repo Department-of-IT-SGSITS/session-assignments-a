@@ -113,9 +113,12 @@ export async function GET() {
     console.error("Error in weather update job:", error);
     // Check if error is a Firestore error object and has a code property
     if (error.code) {
-        // Firebase errors often have a code property (e.g., 5 for NOT_FOUND)
-        return NextResponse.json({ success: false, message: `A Firestore error occurred: ${error.code} ${error.details}` }, { status: 500 });
+        const errorMessage = `A Firestore error occurred: ${error.code} ${error.details || error.message}`;
+        console.error(errorMessage);
+        return NextResponse.json({ success: false, message: errorMessage }, { status: 500 });
     }
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    const errorMessage = error.message || "An unknown error occurred";
+    console.error(errorMessage);
+    return NextResponse.json({ success: false, message: errorMessage }, { status: 500 });
   }
 }
