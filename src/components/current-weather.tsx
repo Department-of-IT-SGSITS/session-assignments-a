@@ -5,11 +5,12 @@ import { WeatherIcon } from "@/components/weather-icon";
 import { db } from "@/lib/firebase-client";
 import { collection, onSnapshot, query, orderBy, limit, doc } from "firebase/firestore";
 import type { WeatherData } from "@/types";
-import { currentWeather as placeholderWeather, currentLocation } from "@/lib/placeholder-data";
+import { currentLocation } from "@/lib/placeholder-data";
 
 export function CurrentWeather() {
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [location, setLocation] = useState(currentLocation);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const weatherQuery = query(collection(db, "weather"), orderBy("date", "desc"), limit(1));
@@ -17,16 +18,9 @@ export function CurrentWeather() {
       if (!snapshot.empty) {
         setWeather(snapshot.docs[0].data() as WeatherData);
       } else {
-        // Use placeholder data if Firestore is empty
-        const now = new Date().toISOString();
-        setWeather({
-            date: now,
-            temp: placeholderWeather.temperature,
-            humidity: placeholderWeather.humidity,
-            rain: placeholderWeather.precipitation,
-            wind: placeholderWeather.wind
-        });
+        setWeather(null);
       }
+      setLoading(false);
     });
 
     const locationRef = doc(db, "settings", "location");
@@ -50,14 +44,14 @@ export function CurrentWeather() {
     return "CloudSun";
   }
 
-  if (!weather) {
+  if (loading || !weather) {
     return (
       <Card>
         <CardHeader>
           <CardTitle>Loading current weather...</CardTitle>
         </CardHeader>
         <CardContent>
-          <p>Please wait.</p>
+          <p>Please wait. If this is the first time, data may take a moment to appear.</p>
         </CardContent>
       </Card>
     );

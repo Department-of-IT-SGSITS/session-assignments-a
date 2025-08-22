@@ -7,7 +7,6 @@ import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { collection, onSnapshot, query, orderBy, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase-client";
 import type { WeatherData } from "@/types";
-import { historicalData as placeholderHistory } from "@/lib/placeholder-data";
 
 
 const chartConfig = {
@@ -18,7 +17,8 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 export function HistoricalData() {
-  const [data, setData] = useState<WeatherData[]>(placeholderHistory);
+  const [data, setData] = useState<WeatherData[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const q = query(collection(db, "weather"), orderBy("date", "desc"), limit(7));
@@ -26,13 +26,44 @@ export function HistoricalData() {
       if (!snapshot.empty) {
         const weatherData = snapshot.docs.map(doc => doc.data() as WeatherData);
         setData(weatherData);
+      } else {
+        setData([]);
       }
+      setLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
 
   const chartData = data.map(d => ({...d, date: new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})).reverse();
+
+  if(loading) {
+    return (
+        <Card className="col-span-1 lg:col-span-2">
+            <CardHeader>
+                <CardTitle>Historical Data</CardTitle>
+                <CardDescription>Loading past 7 days weather data...</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <p>Please wait...</p>
+            </CardContent>
+        </Card>
+    )
+  }
+
+  if(data.length === 0 && !loading) {
+    return (
+        <Card className="col-span-1 lg:col-span-2">
+            <CardHeader>
+                <CardTitle>Historical Data</CardTitle>
+                <CardDescription>No historical data available yet.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <p>Weather data is fetched every 3 hours. Please check back later.</p>
+            </CardContent>
+        </Card>
+    )
+  }
 
 
   return (
