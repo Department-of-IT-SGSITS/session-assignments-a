@@ -50,20 +50,29 @@ export async function GET() {
   console.log("Weather update job started...");
   try {
     const locationRef = adminDb.collection('settings').doc('location');
-    const locationDoc = await locationRef.get();
-    
-    let location: LocationSettings = { city: 'Bhopal' }; // Default
-    if (locationDoc.exists) {
-      location = locationDoc.data() as LocationSettings;
-      console.log("Found location settings in Firestore:", location);
-    } else {
-      console.log("No location settings found in Firestore, using default 'Bhopal'.");
-    }
+    const alertSettingsRef = adminDb.collection('settings').doc('alerts');
 
-    if (!location.city && (!location.lat || !location.lon)) {
-        location.city = 'Bhopal'; // Default fallback
-        console.log("Location details incomplete, falling back to 'Bhopal'.");
+    let locationDoc = await locationRef.get();
+    if (!locationDoc.exists) {
+        console.log("Location settings not found, creating with default.");
+        await locationRef.set({ city: 'Bhopal' });
+        locationDoc = await locationRef.get();
     }
+    
+    let alertSettingsDoc = await alertSettingsRef.get();
+    if (!alertSettingsDoc.exists) {
+        console.log("Alert settings not found, creating with default.");
+        await alertSettingsRef.set({
+            alertsEnabled: true,
+            maxTemp: 35,
+            maxRain: 10,
+            email: "user@example.com"
+        });
+        alertSettingsDoc = await alertSettingsRef.get();
+    }
+    
+    const location = locationDoc.data() as LocationSettings;
+    console.log("Using location settings from Firestore:", location);
 
     const weatherData = await fetchWeather(location);
 
@@ -75,38 +84,38 @@ export async function GET() {
 
 
     // Check for alerts
-    const settingsRef = adminDb.collection('settings').doc('alerts');
-    const settingsDoc = await settingsRef.get();
-    if (settingsDoc.exists) {
-      const settings = settingsDoc.data() as AlertSettings;
-      console.log("Found alert settings:", settings);
-      if (settings && settings.alertsEnabled) {
-        let alertTriggered = false;
-        if (weatherData.temp > settings.maxTemp) {
-          console.log(`Temperature alert triggered: ${weatherData.temp}°C > ${settings.maxTemp}°C`);
-          alertTriggered = true;
-        }
-        if (weatherData.rain > settings.maxRain) {
-          console.log(`Rain alert triggered: ${weatherData.rain}mm > ${settings.maxRain}mm`);
-          alertTriggered = true;
-        }
-        
-        if (alertTriggered) {
-          await sendEmail(weatherData, settings);
-        } else {
-          console.log("No alert conditions met.");
-        }
+    const settings = alertSettingsDoc.data() as AlertSettings;
+    console.log("Found alert settings:", settings);
+
+    if (settings && settings.alertsEnabled) {
+      let alertTriggered = false;
+      if (weatherData.temp > settings.maxTemp) {
+        console.log(`Temperature alert triggered: ${weatherData.temp}°C > ${settings.maxTemp}°C`);
+        alertTriggered = true;
+      }
+      if (weatherData.rain > settings.maxRain) {
+        console.log(`Rain alert triggered: ${weatherData.rain}mm > ${settings.maxRain}mm`);
+        alertTriggered = true;
+      }
+      
+      if (alertTriggered) {
+        await sendEmail(weatherData, settings);
       } else {
-        console.log("Alerts are disabled in settings.");
+        console.log("No alert conditions met.");
       }
     } else {
-      console.log("No alert settings found in Firestore.");
+      console.log("Alerts are disabled in settings.");
     }
 
     console.log("Weather update job finished successfully.");
     return NextResponse.json({ success: true, message: 'Weather data updated successfully.', data: weatherData });
   } catch (error: any) {
     console.error("Error in weather update job:", error);
+    // Check if error is a Firestore error object and has a code property
+    if (error.code) {
+        // Firebase errors often have a code property (e.g., 5 for NOT_FOUND)
+        return NextResponse.json({ success: false, message: `A Firestore error occurred: ${error.code} ${error.details}` }, { status: 500 });
+    }
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }
