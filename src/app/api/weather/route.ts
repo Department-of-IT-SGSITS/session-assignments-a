@@ -52,23 +52,31 @@ export async function GET() {
     const locationRef = adminDb.collection('settings').doc('location');
     const alertSettingsRef = adminDb.collection('settings').doc('alerts');
 
+    console.log("Attempting to fetch location settings from Firestore...");
     let locationDoc = await locationRef.get();
+    console.log("Location settings fetch attempt complete.");
+
     if (!locationDoc.exists) {
-        console.log("Location settings not found, creating with default.");
+        console.log("Location settings not found, creating with default: { city: 'Bhopal' }");
         await locationRef.set({ city: 'Bhopal' });
-        locationDoc = await locationRef.get();
+        locationDoc = await locationRef.get(); // Re-fetch after creation
+        console.log("Default location settings created.");
     }
     
+    console.log("Attempting to fetch alert settings from Firestore...");
     let alertSettingsDoc = await alertSettingsRef.get();
+    console.log("Alert settings fetch attempt complete.");
+
     if (!alertSettingsDoc.exists) {
-        console.log("Alert settings not found, creating with default.");
+        console.log("Alert settings not found, creating with default values.");
         await alertSettingsRef.set({
             alertsEnabled: true,
             maxTemp: 35,
             maxRain: 10,
             email: "user@example.com"
         });
-        alertSettingsDoc = await alertSettingsRef.get();
+        alertSettingsDoc = await alertSettingsRef.get(); // Re-fetch after creation
+        console.log("Default alert settings created.");
     }
     
     const location = locationDoc.data() as LocationSettings;
