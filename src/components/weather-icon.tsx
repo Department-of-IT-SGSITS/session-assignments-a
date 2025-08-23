@@ -1,7 +1,7 @@
 import type { LucideProps } from "lucide-react";
-import { Sun, Cloud, CloudRain, CloudSnow, CloudSun, Wind, Thermometer, Droplets, MapPin, LayoutDashboard, Bell, Settings } from "lucide-react";
+import { Sun, Cloud, CloudRain, CloudSnow, CloudSun, Wind, Thermometer, Droplets, MapPin, LayoutDashboard, Bell, Settings, RefreshCw } from "lucide-react";
 
-type IconName = "Sun" | "Cloud" | "CloudRain" | "CloudSnow" | "CloudSun" | "Wind" | "Thermometer" | "Droplets" | "MapPin" | "LayoutDashboard" | "Bell" | "Settings" | "default";
+type IconName = "Sun" | "Cloud" | "CloudRain" | "CloudSnow" | "CloudSun" | "Wind" | "Thermometer" | "Droplets" | "MapPin" | "LayoutDashboard" | "Bell" | "Settings" | "RefreshCw" | "default";
 
 const iconComponents: Record<IconName, React.FC<LucideProps>> = {
   Sun,
@@ -16,6 +16,7 @@ const iconComponents: Record<IconName, React.FC<LucideProps>> = {
   LayoutDashboard,
   Bell,
   Settings,
+  RefreshCw,
   default: Sun,
 };
 
