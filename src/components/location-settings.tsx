@@ -1,16 +1,17 @@
 "use client";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase-client";
 import { useToast } from "@/hooks/use-toast";
 import type { LocationSettings as LocationSettingsType } from "@/types";
+import { MapPin } from "lucide-react";
+import MapPicker from "@/components/map-picker";
 
 export function LocationSettings() {
-  const [location, setLocation] = useState<LocationSettingsType>({ city: "Bhopal", lat: undefined, lon: undefined });
+  const [location, setLocation] = useState<LocationSettingsType | null>(null);
+  const [isMapOpen, setIsMapOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -19,75 +20,78 @@ export function LocationSettings() {
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         setLocation(docSnap.data() as LocationSettingsType);
+      } else {
+        setLocation({ city: "Bhopal", lat: 23.2599, lon: 77.4126, displayName: "Bhopal, Madhya Pradesh, India" });
       }
     };
     fetchLocation();
   }, []);
 
   const handleSave = async () => {
-    try {
-      // Create a clean object to save, removing empty fields
-      const dataToSave: Partial<LocationSettingsType> = { city: location.city };
-      if (location.lat) dataToSave.lat = Number(location.lat);
-      if (location.lon) dataToSave.lon = Number(location.lon);
-
-      await setDoc(doc(db, "settings", "location"), dataToSave, { merge: true });
-      toast({
-        title: "Success",
-        description: "Location saved successfully.",
-      });
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to save location.",
-      });
+    if (location) {
+      try {
+        await setDoc(doc(db, "settings", "location"), location, { merge: true });
+        toast({
+          title: "Success",
+          description: "Location saved successfully.",
+        });
+        setIsMapOpen(false);
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to save location.",
+        });
+      }
     }
   };
-  
-  const handleChange = (field: keyof LocationSettingsType, value: string) => {
-    setLocation(prev => ({ ...prev, [field]: value }));
+
+  const handleLocationSelect = (selectedLocation: LocationSettingsType) => {
+    setLocation(prev => ({
+      ...prev,
+      lat: selectedLocation.lat,
+      lon: selectedLocation.lon,
+      displayName: selectedLocation.displayName,
+      city: selectedLocation.city
+    }));
   };
+
+  if (!location) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Location</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p>Loading location settings...</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Location</CardTitle>
-        <CardDescription>Set your preferred location for weather data.</CardDescription>
+        <CardDescription>Your currently selected location.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="city">City</Label>
-          <Input 
-            id="city" 
-            placeholder="Enter a city name" 
-            value={location.city}
-            onChange={(e) => handleChange("city", e.target.value)}
-          />
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-muted">
+          <MapPin className="h-5 w-5 text-muted-foreground" />
+          <span className="font-medium">{location.displayName || `Lat: ${location.lat}, Lon: ${location.lon}`}</span>
         </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="lat">Latitude</Label>
-            <Input 
-              id="lat" 
-              type="number"
-              placeholder="e.g. 23.2599" 
-              value={location.lat || ""}
-              onChange={(e) => handleChange("lat", e.target.value)}
-            />
+        
+        {isMapOpen ? (
+          <div className="space-y-4">
+            <MapPicker onLocationSelect={handleLocationSelect} current_lat={location.lat} current_lon={location.lon}/>
+            <div className="flex gap-2">
+              <Button onClick={handleSave} className="w-full bg-accent text-accent-foreground hover:bg-accent/90">Save Location</Button>
+              <Button onClick={() => setIsMapOpen(false)} variant="outline" className="w-full">Cancel</Button>
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="lon">Longitude</Label>
-            <Input 
-              id="lon" 
-              type="number"
-              placeholder="e.g. 77.4126" 
-              value={location.lon || ""}
-              onChange={(e) => handleChange("lon", e.target.value)}
-            />
-          </div>
-        </div>
-        <Button onClick={handleSave} className="w-full bg-accent text-accent-foreground hover:bg-accent/90">Save Location</Button>
+        ) : (
+          <Button onClick={() => setIsMapOpen(true)} className="w-full">Change Location</Button>
+        )}
       </CardContent>
     </Card>
   );

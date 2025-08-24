@@ -4,12 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { WeatherIcon } from "@/components/weather-icon";
 import { db } from "@/lib/firebase-client";
 import { collection, onSnapshot, query, orderBy, limit, doc } from "firebase/firestore";
-import type { WeatherData } from "@/types";
-import { currentLocation } from "@/lib/placeholder-data";
+import type { WeatherData, LocationSettings } from "@/types";
 
 export function CurrentWeather() {
   const [weather, setWeather] = useState<WeatherData | null>(null);
-  const [location, setLocation] = useState(currentLocation);
+  const [location, setLocation] = useState<LocationSettings | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -25,10 +24,8 @@ export function CurrentWeather() {
 
     const locationRef = doc(db, "settings", "location");
     const unsubscribeLocation = onSnapshot(locationRef, (docSnap) => {
-      if (docSnap.exists() && docSnap.data().city) {
-        setLocation(docSnap.data().city);
-      } else {
-        setLocation(currentLocation);
+      if (docSnap.exists()) {
+        setLocation(docSnap.data() as LocationSettings);
       }
     });
 
@@ -57,6 +54,8 @@ export function CurrentWeather() {
     );
   }
 
+  const locationName = location?.displayName || location?.city || "your location";
+
   return (
     <Card>
       <CardHeader>
@@ -64,7 +63,7 @@ export function CurrentWeather() {
             <div>
                 <CardTitle className="text-3xl font-bold">{weather.temp.toFixed(1)}°C</CardTitle>
                 <CardDescription className="text-base">
-                  {weather.rain > 0 ? "Rainy" : "Clear"} in {location}
+                  {weather.rain > 0 ? "Rainy" : "Clear"} in {locationName}
                 </CardDescription>
             </div>
             <WeatherIcon name={getWeatherIcon(weather.temp)} className="h-12 w-12 text-primary" />

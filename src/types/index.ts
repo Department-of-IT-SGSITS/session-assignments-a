@@ -17,4 +17,5 @@ export type LocationSettings = {
   city?: string;
   lat?: number;
   lon?: number;
+  displayName?: string;
 };

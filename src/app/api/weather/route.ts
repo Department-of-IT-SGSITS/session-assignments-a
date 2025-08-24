@@ -12,15 +12,12 @@ async function fetchWeather(location: LocationSettings) {
 
   if (location.lat && location.lon) {
     url += `&lat=${location.lat}&lon=${location.lon}`;
-    console.log(`Fetching weather for coordinates: ${location.lat}, ${location.lon}`);
   } else if (location.city) {
     url += `&q=${location.city}`;
-    console.log(`Fetching weather for city: ${location.city}`);
   } else {
     throw new Error('No location provided. Please set a city or coordinates.');
   }
 
-  console.log(`Requesting URL: ${url}`);
   const response = await fetch(url);
 
   if (!response.ok) {
@@ -37,7 +34,6 @@ async function fetchWeather(location: LocationSettings) {
     wind: data.wind.speed * 3.6, // convert m/s to km/h
   };
   
-  console.log("Successfully fetched weather data:", weatherData);
   return weatherData;
 }
 
@@ -52,20 +48,15 @@ export async function GET() {
     const locationRef = adminDb.collection('settings').doc('location');
     const alertSettingsRef = adminDb.collection('settings').doc('alerts');
 
-    console.log("Attempting to fetch location settings from Firestore...");
     let locationDoc = await locationRef.get();
-    console.log("Location settings fetch attempt complete.");
 
     if (!locationDoc.exists) {
         console.log("Location settings not found, creating with default: { city: 'Bhopal' }");
         await locationRef.set({ city: 'Bhopal' });
         locationDoc = await locationRef.get(); // Re-fetch after creation
-        console.log("Default location settings created.");
     }
     
-    console.log("Attempting to fetch alert settings from Firestore...");
     let alertSettingsDoc = await alertSettingsRef.get();
-    console.log("Alert settings fetch attempt complete.");
 
     if (!alertSettingsDoc.exists) {
         console.log("Alert settings not found, creating with default values.");
@@ -76,25 +67,18 @@ export async function GET() {
             email: "user@example.com"
         });
         alertSettingsDoc = await alertSettingsRef.get(); // Re-fetch after creation
-        console.log("Default alert settings created.");
     }
     
     const location = locationDoc.data() as LocationSettings;
-    console.log("Using location settings from Firestore:", location);
-
     const weatherData = await fetchWeather(location);
 
     // Save to Firestore
     const weatherDocId = new Date().toISOString();
     const weatherRef = adminDb.collection('weather').doc(weatherDocId);
     await weatherRef.set(weatherData);
-    console.log(`Weather data saved to Firestore with ID: ${weatherDocId}`);
-
 
     // Check for alerts
     const settings = alertSettingsDoc.data() as AlertSettings;
-    console.log("Found alert settings:", settings);
-
     if (settings && settings.alertsEnabled) {
       let alertTriggered = false;
       if (weatherData.temp > settings.maxTemp) {
@@ -108,11 +92,7 @@ export async function GET() {
       
       if (alertTriggered) {
         await sendEmail(weatherData, settings);
-      } else {
-        console.log("No alert conditions met.");
       }
-    } else {
-      console.log("Alerts are disabled in settings.");
     }
 
     console.log("Weather update job finished successfully.");
@@ -122,11 +102,9 @@ export async function GET() {
     // Check if error is a Firestore error object and has a code property
     if (error.code) {
         const errorMessage = `A Firestore error occurred: ${error.code} ${error.details || error.message}`;
-        console.error(errorMessage);
         return NextResponse.json({ success: false, message: errorMessage }, { status: 500 });
     }
     const errorMessage = error.message || "An unknown error occurred";
-    console.error(errorMessage);
     return NextResponse.json({ success: false, message: errorMessage }, { status: 500 });
   }
 }
