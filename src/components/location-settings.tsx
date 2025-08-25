@@ -20,10 +20,13 @@ export function LocationSettings() {
       const docRef = doc(db, "settings", "location");
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
-        setLocation(docSnap.data() as LocationSettingsType);
+        const data = docSnap.data() as LocationSettingsType
+        setLocation(data);
+        setSelectedLocation(data);
       } else {
         const defaultLocation = { city: "Bhopal", lat: 23.2599, lon: 77.4126, displayName: "Bhopal, Madhya Pradesh, India" };
         setLocation(defaultLocation);
+        setSelectedLocation(defaultLocation);
         await setDoc(docRef, defaultLocation);
       }
     };
@@ -31,23 +34,22 @@ export function LocationSettings() {
   }, []);
 
   const handleSave = async () => {
-    const locationToSave = selectedLocation || location;
-    if (locationToSave) {
+    if (selectedLocation) {
       try {
-        await setDoc(doc(db, "settings", "location"), locationToSave, { merge: true });
-        setLocation(locationToSave);
+        await setDoc(doc(db, "settings", "location"), selectedLocation, { merge: true });
+        setLocation(selectedLocation);
         toast({
           title: "Success",
           description: "Location saved successfully.",
         });
         setIsMapOpen(false);
-        setSelectedLocation(null); 
       } catch (error) {
         toast({
           variant: "destructive",
           title: "Error",
           description: "Failed to save location.",
         });
+        console.error("Error saving location:", error);
       }
     }
   };
@@ -78,7 +80,7 @@ export function LocationSettings() {
       <CardContent className="space-y-4">
         <div className="flex items-center gap-2 p-3 rounded-lg bg-muted">
           <MapPin className="h-5 w-5 text-muted-foreground" />
-          <span className="font-medium">{location.displayName || `Lat: ${location.lat}, Lon: ${location.lon}`}</span>
+          <span className="font-medium">{selectedLocation?.displayName || location.displayName || `Lat: ${location.lat}, Lon: ${location.lon}`}</span>
         </div>
         
         {isMapOpen ? (

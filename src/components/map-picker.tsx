@@ -40,6 +40,7 @@ const MapPicker = ({ onLocationSelect, current_lat, current_lon }: MapPickerProp
             
             onLocationSelect({ lat: lat, lon: lng, displayName: address, city: city });
         } else {
+            console.error('Geocoder failed due to: ' + status);
             onLocationSelect({ lat: lat, lon: lng, displayName: `Lat: ${lat.toFixed(4)}, Lon: ${lng.toFixed(4)}` });
         }
       });
