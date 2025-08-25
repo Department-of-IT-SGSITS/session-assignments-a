@@ -15,12 +15,14 @@ const containerStyle = {
   borderRadius: 'var(--radius)',
 };
 
+const libraries: ('places')[] = ['places'];
+
 const MapPicker = ({ onLocationSelect, current_lat, current_lon }: MapPickerProps) => {
   const [marker, setMarker] = useState({ lat: current_lat || 23.2599, lng: current_lon || 77.4126 });
 
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
-    libraries: ['places'],
+    libraries: libraries,
   });
 
   const onMapClick = useCallback((event: google.maps.MapMouseEvent) => {

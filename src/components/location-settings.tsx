@@ -11,6 +11,7 @@ import MapPicker from "@/components/map-picker";
 
 export function LocationSettings() {
   const [location, setLocation] = useState<LocationSettingsType | null>(null);
+  const [selectedLocation, setSelectedLocation] = useState<LocationSettingsType | null>(null);
   const [isMapOpen, setIsMapOpen] = useState(false);
   const { toast } = useToast();
 
@@ -21,21 +22,26 @@ export function LocationSettings() {
       if (docSnap.exists()) {
         setLocation(docSnap.data() as LocationSettingsType);
       } else {
-        setLocation({ city: "Bhopal", lat: 23.2599, lon: 77.4126, displayName: "Bhopal, Madhya Pradesh, India" });
+        const defaultLocation = { city: "Bhopal", lat: 23.2599, lon: 77.4126, displayName: "Bhopal, Madhya Pradesh, India" };
+        setLocation(defaultLocation);
+        await setDoc(docRef, defaultLocation);
       }
     };
     fetchLocation();
   }, []);
 
   const handleSave = async () => {
-    if (location) {
+    const locationToSave = selectedLocation || location;
+    if (locationToSave) {
       try {
-        await setDoc(doc(db, "settings", "location"), location, { merge: true });
+        await setDoc(doc(db, "settings", "location"), locationToSave, { merge: true });
+        setLocation(locationToSave);
         toast({
           title: "Success",
           description: "Location saved successfully.",
         });
         setIsMapOpen(false);
+        setSelectedLocation(null); 
       } catch (error) {
         toast({
           variant: "destructive",
@@ -46,14 +52,8 @@ export function LocationSettings() {
     }
   };
 
-  const handleLocationSelect = (selectedLocation: LocationSettingsType) => {
-    setLocation(prev => ({
-      ...prev,
-      lat: selectedLocation.lat,
-      lon: selectedLocation.lon,
-      displayName: selectedLocation.displayName,
-      city: selectedLocation.city
-    }));
+  const handleLocationSelect = (newSelection: LocationSettingsType) => {
+    setSelectedLocation(newSelection);
   };
 
   if (!location) {
