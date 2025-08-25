@@ -33,11 +33,32 @@ export function LocationSettings() {
     fetchLocation();
   }, []);
 
+  const clearHistoricalData = async () => {
+    try {
+      const response = await fetch('/api/weather/clear', { method: 'POST' });
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to clear historical data.');
+      }
+      toast({
+        title: "Historical Data Cleared",
+        description: "Previous weather history has been removed.",
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Clear History Failed",
+        description: error.message,
+      });
+    }
+  };
+
   const handleSave = async () => {
     if (selectedLocation) {
       try {
         await setDoc(doc(db, "settings", "location"), selectedLocation, { merge: true });
         setLocation(selectedLocation);
+        await clearHistoricalData();
         toast({
           title: "Success",
           description: "Location saved successfully.",
