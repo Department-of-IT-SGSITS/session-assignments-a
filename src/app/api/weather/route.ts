@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
 import type { WeatherData, LocationSettings, AlertSettings } from '@/types';
+import sgMail from '@sendgrid/mail';
 
 async function fetchWeather(location: LocationSettings) {
   const apiKey = process.env.OPENWEATHER_API_KEY;
@@ -37,9 +38,45 @@ async function fetchWeather(location: LocationSettings) {
   return weatherData;
 }
 
-async function sendEmail(weather: WeatherData, alertSettings: AlertSettings) {
-  // TODO: Implement email sending logic here using your preferred email service
-  console.log(`SENDING EMAIL ALERT to ${alertSettings.email}:`, weather);
+async function sendEmail(weather: WeatherData, alertSettings: AlertSettings, location: LocationSettings) {
+  const sendgridApiKey = process.env.SENDGRID_API_KEY;
+  const fromEmail = process.env.SENDGRID_FROM_EMAIL;
+
+  if (!sendgridApiKey) {
+    console.error("SENDGRID_API_KEY is not set. Skipping email.");
+    return;
+  }
+  if (!fromEmail) {
+    console.error("SENDGRID_FROM_EMAIL is not set. Skipping email.");
+    return;
+  }
+
+  sgMail.setApiKey(sendgridApiKey);
+
+  const msg = {
+    to: alertSettings.email,
+    from: fromEmail,
+    subject: `Weather Alert for ${location.displayName || location.city}`,
+    html: `
+      <h1>Weather Alert</h1>
+      <p>A weather alert has been triggered for your location: ${location.displayName || location.city}.</p>
+      <ul>
+        <li>Temperature: ${weather.temp.toFixed(1)}°C (Threshold: ${alertSettings.maxTemp}°C)</li>
+        <li>Rainfall: ${weather.rain} mm/h (Threshold: ${alertSettings.maxRain} mm/h)</li>
+      </ul>
+      <p>This is an automated message from WeatherWise Watcher.</p>
+    `,
+  };
+
+  try {
+    await sgMail.send(msg);
+    console.log(`Email alert sent successfully to ${alertSettings.email}`);
+  } catch (error: any) {
+    console.error('Error sending email via SendGrid:', error);
+    if (error.response) {
+      console.error(error.response.body)
+    }
+  }
 }
 
 export async function GET() {
@@ -91,7 +128,7 @@ export async function GET() {
       }
       
       if (alertTriggered) {
-        await sendEmail(weatherData, settings);
+        await sendEmail(weatherData, settings, location);
       }
     }
 
