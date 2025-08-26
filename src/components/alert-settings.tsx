@@ -25,7 +25,7 @@ export function AlertSettings() {
         setSettings({
           alertsEnabled: true,
           maxTemp: 35,
-          maxRain: 10,
+          maxRain: 0.1,
           email: "user@example.com"
         });
       }
@@ -62,7 +62,7 @@ export function AlertSettings() {
       <Card>
         <CardHeader>
           <CardTitle>Alert Settings</CardTitle>
-          <CardDescription>Configure thresholds for weather alerts.</CardDescription>
+          <CardDescription>Configure settings for weather alerts.</CardDescription>
         </CardHeader>
         <CardContent>
           <p>Loading...</p>
@@ -75,33 +75,15 @@ export function AlertSettings() {
     <Card>
       <CardHeader>
         <CardTitle>Alert Settings</CardTitle>
-        <CardDescription>Configure thresholds for weather alerts.</CardDescription>
+        <CardDescription>Configure settings for weather alerts.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="flex items-center justify-between">
-          <Label htmlFor="email-alerts" className="font-semibold">Enable Email Alerts</Label>
+          <Label htmlFor="email-alerts" className="font-semibold">Enable Rain Alerts</Label>
           <Switch
             id="email-alerts"
             checked={settings.alertsEnabled}
             onCheckedChange={(value) => handleChange("alertsEnabled", value)}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="max-temp">Max Temperature (°C)</Label>
-          <Input
-            id="max-temp"
-            type="number"
-            value={settings.maxTemp}
-            onChange={(e) => handleChange("maxTemp", Number(e.target.value))}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="max-rain">Max Rainfall (mm/h)</Label>
-          <Input
-            id="max-rain"
-            type="number"
-            value={settings.maxRain}
-            onChange={(e) => handleChange("maxRain", Number(e.target.value))}
           />
         </div>
         <div className="space-y-2">

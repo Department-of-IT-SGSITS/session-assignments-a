@@ -81,11 +81,13 @@ export function CurrentWeather() {
             <span className="font-medium">Humidity:</span>
             <span>{weather.humidity}%</span>
           </div>
-          <div className="flex items-center gap-2">
-            <WeatherIcon name="CloudRain" className="h-5 w-5 text-muted-foreground" />
-             <span className="font-medium">Rain:</span>
-            <span>{weather.rain} mm</span>
-          </div>
+          {weather.pop !== undefined && (
+            <div className="flex items-center gap-2">
+                <WeatherIcon name="CloudRain" className="h-5 w-5 text-muted-foreground" />
+                <span className="font-medium">Rain Chance:</span>
+                <span>{weather.pop.toFixed(0)}%</span>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

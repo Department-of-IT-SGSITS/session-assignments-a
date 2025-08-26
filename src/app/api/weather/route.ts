@@ -3,13 +3,15 @@ import { adminDb } from '@/lib/firebase-admin';
 import type { WeatherData, LocationSettings, AlertSettings } from '@/types';
 import sgMail from '@sendgrid/mail';
 
+// This function now fetches the 3-hour forecast
 async function fetchWeather(location: LocationSettings) {
   const apiKey = process.env.OPENWEATHER_API_KEY;
   if (!apiKey) {
     throw new Error('OPENWEATHER_API_KEY is not set in .env.local');
   }
 
-  let url = `https://api.openweathermap.org/data/2.5/weather?appid=${apiKey}&units=metric`;
+  // Use the 'forecast' endpoint instead of 'weather'
+  let url = `https://api.openweathermap.org/data/2.5/forecast?appid=${apiKey}&units=metric`;
 
   if (location.lat && location.lon) {
     url += `&lat=${location.lat}&lon=${location.lon}`;
@@ -18,27 +20,38 @@ async function fetchWeather(location: LocationSettings) {
   } else {
     throw new Error('No location provided. Please set a city or coordinates.');
   }
+  
+  // We only need the first forecast entry
+  url += '&cnt=1';
 
   const response = await fetch(url);
 
   if (!response.ok) {
     const errorBody = await response.text();
-    throw new Error(`Failed to fetch weather data. Status: ${response.status}. Body: ${errorBody}`);
+    throw new Error(`Failed to fetch weather forecast. Status: ${response.status}. Body: ${errorBody}`);
   }
   const data = await response.json();
-  
+
+  if (!data.list || data.list.length === 0) {
+    throw new Error('No forecast data available in the response.');
+  }
+
+  const forecast = data.list[0];
+
   const weatherData: WeatherData = {
-    date: new Date().toISOString(),
-    temp: data.main.temp,
-    humidity: data.main.humidity,
-    rain: data.rain ? data.rain['1h'] : 0, // Rain volume for the last 1 hour in mm
-    wind: data.wind.speed * 3.6, // convert m/s to km/h
+    date: new Date(forecast.dt * 1000).toISOString(),
+    temp: forecast.main.temp,
+    humidity: forecast.main.humidity,
+    // Use rain volume from '3h' key if available, otherwise check 'pop'
+    rain: forecast.rain ? forecast.rain['3h'] : (forecast.pop > 0 ? 0.1 : 0), // 'pop' is probability of precipitation
+    wind: forecast.wind.speed * 3.6, // convert m/s to km/h
+    pop: forecast.pop * 100 // Probability of precipitation in %
   };
   
   return weatherData;
 }
 
-async function sendEmail(weather: WeatherData, alertSettings: AlertSettings, location: LocationSettings) {
+async function sendEmail(alertSettings: AlertSettings, location: LocationSettings) {
   const sendgridApiKey = process.env.SENDGRID_API_KEY;
   const fromEmail = process.env.SENDGRID_FROM_EMAIL;
 
@@ -56,14 +69,10 @@ async function sendEmail(weather: WeatherData, alertSettings: AlertSettings, loc
   const msg = {
     to: alertSettings.email,
     from: fromEmail,
-    subject: `Weather Alert for ${location.displayName || location.city}`,
+    subject: `Rain Alert for ${location.displayName || location.city}`,
     html: `
-      <h1>Weather Alert</h1>
-      <p>A weather alert has been triggered for your location: ${location.displayName || location.city}.</p>
-      <ul>
-        <li>Temperature: ${weather.temp.toFixed(1)}°C (Threshold: ${alertSettings.maxTemp}°C)</li>
-        <li>Rainfall: ${weather.rain} mm/h (Threshold: ${alertSettings.maxRain} mm/h)</li>
-      </ul>
+      <h1>Rain Alert</h1>
+      <p>Heads up! There is a high chance of rain within the next 3 hours at your location: ${location.displayName || location.city}.</p>
       <p>This is an automated message from WeatherWise Watcher.</p>
     `,
   };
@@ -80,7 +89,7 @@ async function sendEmail(weather: WeatherData, alertSettings: AlertSettings, loc
 }
 
 export async function GET() {
-  console.log("Weather update job started...");
+  console.log("Weather forecast update job started...");
   try {
     const locationRef = adminDb.collection('settings').doc('location');
     const alertSettingsRef = adminDb.collection('settings').doc('alerts');
@@ -100,7 +109,7 @@ export async function GET() {
         await alertSettingsRef.set({
             alertsEnabled: true,
             maxTemp: 35,
-            maxRain: 10,
+            maxRain: 0.1, // Set a low rain threshold to trigger for any predicted rain
             email: "user@example.com"
         });
         alertSettingsDoc = await alertSettingsRef.get(); // Re-fetch after creation
@@ -116,26 +125,16 @@ export async function GET() {
 
     // Check for alerts
     const settings = alertSettingsDoc.data() as AlertSettings;
-    if (settings && settings.alertsEnabled) {
-      let alertTriggered = false;
-      if (weatherData.temp > settings.maxTemp) {
-        console.log(`Temperature alert triggered: ${weatherData.temp}°C > ${settings.maxTemp}°C`);
-        alertTriggered = true;
-      }
-      if (weatherData.rain > settings.maxRain) {
-        console.log(`Rain alert triggered: ${weatherData.rain}mm > ${settings.maxRain}mm`);
-        alertTriggered = true;
-      }
-      
-      if (alertTriggered) {
-        await sendEmail(weatherData, settings, location);
-      }
+    // The alert is now based on probability of precipitation ('pop')
+    if (settings && settings.alertsEnabled && weatherData.pop && weatherData.pop > 0) {
+        console.log(`Rain alert triggered. Probability of precipitation: ${weatherData.pop}%`);
+        await sendEmail(settings, location);
     }
 
-    console.log("Weather update job finished successfully.");
+    console.log("Weather forecast update job finished successfully.");
     return NextResponse.json({ success: true, message: 'Weather data updated successfully.', data: weatherData });
   } catch (error: any) {
-    console.error("Error in weather update job:", error);
+    console.error("Error in weather forecast update job:", error);
     // Check if error is a Firestore error object and has a code property
     if (error.code) {
         const errorMessage = `A Firestore error occurred: ${error.code} ${error.details || error.message}`;

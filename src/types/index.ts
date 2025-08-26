@@ -4,6 +4,7 @@ export type WeatherData = {
   humidity: number;
   rain: number;
   wind: number;
+  pop?: number; // Probability of precipitation
 };
 
 export type AlertSettings = {
