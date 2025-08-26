@@ -51,7 +51,7 @@ async function fetchWeather(location: LocationSettings) {
   return weatherData;
 }
 
-async function sendEmail(alertSettings: AlertSettings, location: LocationSettings) {
+async function sendEmail(alertSettings: AlertSettings, location: LocationSettings, weatherData: WeatherData) {
   const sendgridApiKey = process.env.SENDGRID_API_KEY;
   const fromEmail = process.env.SENDGRID_FROM_EMAIL;
 
@@ -66,15 +66,46 @@ async function sendEmail(alertSettings: AlertSettings, location: LocationSetting
 
   sgMail.setApiKey(sendgridApiKey);
 
-  const msg = {
-    to: alertSettings.email,
-    from: fromEmail,
-    subject: `Rain Alert for ${location.displayName || location.city}`,
-    html: `
+  let subject = '';
+  let html = '';
+
+  const isRaining = weatherData.pop && weatherData.pop > 0;
+  const isTooHot = weatherData.temp > alertSettings.maxTemp;
+
+  if (isRaining && isTooHot) {
+    subject = `Weather Alert for ${location.displayName || location.city}`;
+    html = `
+      <h1>Weather Alert</h1>
+      <p>Heads up! There are multiple weather alerts for your location: ${location.displayName || location.city}.</p>
+      <ul>
+        <li>High chance of rain within the next 3 hours.</li>
+        <li>Temperature is forecast to exceed your threshold of ${alertSettings.maxTemp}°C.</li>
+      </ul>
+      <p>This is an automated message from WeatherWise Watcher.</p>
+    `;
+  } else if (isRaining) {
+    subject = `Rain Alert for ${location.displayName || location.city}`;
+    html = `
       <h1>Rain Alert</h1>
       <p>Heads up! There is a high chance of rain within the next 3 hours at your location: ${location.displayName || location.city}.</p>
       <p>This is an automated message from WeatherWise Watcher.</p>
-    `,
+    `;
+  } else if (isTooHot) {
+    subject = `Temperature Alert for ${location.displayName || location.city}`;
+    html = `
+      <h1>Temperature Alert</h1>
+      <p>Heads up! The temperature is forecast to be ${weatherData.temp.toFixed(1)}°C, which exceeds your threshold of ${alertSettings.maxTemp}°C at your location: ${location.displayName || location.city}.</p>
+      <p>This is an automated message from WeatherWise Watcher.</p>
+    `;
+  } else {
+    return; // No alert condition met
+  }
+
+  const msg = {
+    to: alertSettings.email,
+    from: fromEmail,
+    subject: subject,
+    html: html,
   };
 
   try {
@@ -125,10 +156,14 @@ export async function GET() {
 
     // Check for alerts
     const settings = alertSettingsDoc.data() as AlertSettings;
-    // The alert is now based on probability of precipitation ('pop')
-    if (settings && settings.alertsEnabled && weatherData.pop && weatherData.pop > 0) {
-        console.log(`Rain alert triggered. Probability of precipitation: ${weatherData.pop}%`);
-        await sendEmail(settings, location);
+    if (settings && settings.alertsEnabled) {
+      const isRaining = weatherData.pop && weatherData.pop > 0;
+      const isTooHot = weatherData.temp > settings.maxTemp;
+      
+      if (isRaining || isTooHot) {
+        console.log(`Alert triggered. Rain chance: ${weatherData.pop}%, Temp: ${weatherData.temp}°C, Threshold: ${settings.maxTemp}°C`);
+        await sendEmail(settings, location, weatherData);
+      }
     }
 
     console.log("Weather forecast update job finished successfully.");

@@ -53,7 +53,8 @@ export function AlertSettings() {
 
   const handleChange = (field: keyof AlertSettingsType, value: any) => {
     if (settings) {
-      setSettings({ ...settings, [field]: value });
+      const numericValue = ["maxTemp", "maxRain"].includes(field) ? Number(value) : value;
+      setSettings({ ...settings, [field]: numericValue });
     }
   };
 
@@ -79,9 +80,9 @@ export function AlertSettings() {
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="flex items-center justify-between">
-          <Label htmlFor="email-alerts" className="font-semibold">Enable Rain Alerts</Label>
+          <Label htmlFor="alerts-enabled" className="font-semibold">Enable Alerts</Label>
           <Switch
-            id="email-alerts"
+            id="alerts-enabled"
             checked={settings.alertsEnabled}
             onCheckedChange={(value) => handleChange("alertsEnabled", value)}
           />
@@ -93,6 +94,15 @@ export function AlertSettings() {
             type="email"
             value={settings.email}
             onChange={(e) => handleChange("email", e.target.value)}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="maxTemp">Max Temperature (°C)</Label>
+          <Input
+            id="maxTemp"
+            type="number"
+            value={settings.maxTemp}
+            onChange={(e) => handleChange("maxTemp", e.target.value)}
           />
         </div>
         <Button onClick={handleSave} className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
