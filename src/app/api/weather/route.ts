@@ -3,14 +3,12 @@ import { adminDb } from '@/lib/firebase-admin';
 import type { WeatherData, LocationSettings, AlertSettings } from '@/types';
 import sgMail from '@sendgrid/mail';
 
-// This function now fetches the 3-hour forecast
 async function fetchWeather(location: LocationSettings) {
   const apiKey = process.env.OPENWEATHER_API_KEY;
   if (!apiKey) {
     throw new Error('OPENWEATHER_API_KEY is not set in .env.local');
   }
 
-  // Use the 'forecast' endpoint instead of 'weather'
   let url = `https://api.openweathermap.org/data/2.5/forecast?appid=${apiKey}&units=metric`;
 
   if (location.lat && location.lon) {
@@ -21,7 +19,6 @@ async function fetchWeather(location: LocationSettings) {
     throw new Error('No location provided. Please set a city or coordinates.');
   }
   
-  // We only need the first forecast entry
   url += '&cnt=1';
 
   const response = await fetch(url);
@@ -42,7 +39,6 @@ async function fetchWeather(location: LocationSettings) {
     date: new Date(forecast.dt * 1000).toISOString(),
     temp: forecast.main.temp,
     humidity: forecast.main.humidity,
-    // Use rain volume from '3h' key if available, otherwise check 'pop'
     rain: forecast.rain ? forecast.rain['3h'] : (forecast.pop > 0 ? 0.1 : 0), // 'pop' is probability of precipitation
     wind: forecast.wind.speed * 3.6, // convert m/s to km/h
     pop: forecast.pop * 100 // Probability of precipitation in %
